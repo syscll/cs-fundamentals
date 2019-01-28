@@ -2,50 +2,66 @@ package main
 
 import "testing"
 
-func TestCacheHas(t *testing.T) {
-	c := NewCache(1)
-	if c.Has("test") {
+func TestNewLRU(t *testing.T) {
+	t.Run("TestError", func(t *testing.T) {
+		_, err := NewLRU(0)
+		if err == nil {
+			t.Error("expected error due to invalid cache size")
+		}
+	})
+
+	t.Run("TestSuccess", func(t *testing.T) {
+		_, err := NewLRU(10)
+		if err != nil {
+			t.Errorf("expected error: nil, got: %v", err)
+		}
+	})
+}
+
+func TestLRUContains(t *testing.T) {
+	c, _ := NewLRU(1)
+	if c.Contains("test") {
 		t.Error("expected to have nothing in the cache")
 	}
 }
 
-func TestCachePut(t *testing.T) {
-	c := NewCache(1)
+func TestLRUAdd(t *testing.T) {
+	c, _ := NewLRU(1)
 
-	t.Run("TestEmptyCache", func(t *testing.T) {
+	t.Run("TestEmptyLRU", func(t *testing.T) {
 		// put new item in cache
-		c.Put("test")
+		c.Add("test")
 
 		// check item has been added to cache
-		if !c.Has("test") {
+		if !c.Contains("test") {
 			t.Error("expected to have 'test' item in cache")
 		}
 	})
 
-	t.Run("TestFullCache", func(t *testing.T) {
+	t.Run("TestFullLRU", func(t *testing.T) {
 		// put another new item in cache
-		c.Put("test-2")
+		c.Add("test-2")
 
 		// check item has been added to cache
-		if !c.Has("test-2") {
+		if !c.Contains("test-2") {
 			t.Error("expected to have 'test' item in cache")
 		}
 
 		// check original item was deleted from cache
-		if c.Has("test") {
+		if c.Contains("test") {
 			t.Error("expected 'test' item to be deleted from cache")
 		}
 	})
 }
 
-func TestCacheDelete(t *testing.T) {
-	c := NewCache(1)
+func TestLRUDelete(t *testing.T) {
+	c, _ := NewLRU(1)
 
 	// put new item in cache
-	c.Put("test")
+	c.Add("test")
 
 	// check item has been added to cache
-	if !c.Has("test") {
+	if !c.Contains("test") {
 		t.Error("expected to have 'test' item in cache")
 	}
 
@@ -53,7 +69,7 @@ func TestCacheDelete(t *testing.T) {
 	c.Delete("test")
 
 	// check item has been deleted from cache
-	if c.Has("test") {
+	if c.Contains("test") {
 		t.Error("expected to have nothing in the cache")
 	}
 }

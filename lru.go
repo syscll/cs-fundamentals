@@ -2,77 +2,82 @@ package main
 
 import (
 	"container/list"
+	"errors"
 	"sync"
 )
 
-// Cache is an implementation of an LRU cache.
-type Cache struct {
-	// s represents the size of the cache.
-	s int
+// LRU is an implementation of an LRU cache.
+type LRU struct {
+	// size represents the size of the cache.
+	size int
 
-	// l is a doubly linked list of elements in the cache.
-	l *list.List
+	// items is a doubly linked list of elements in the cache.
+	items *list.List
 
-	// e contains an indexed list of elements in the cache.
-	e map[interface{}]*list.Element
+	// exists contains an indexed list of elements in the cache.
+	exists map[interface{}]*list.Element
 
 	// protect against concurrent reads/writes.
-	sync.Mutex
+	mutex sync.Mutex
 }
 
-// Has checks if a given element is in the Cache.
-func (c *Cache) Has(v interface{}) bool {
-	c.Lock()
-	defer c.Unlock()
+// Contains checks if a given element is in the LRU.
+func (lru *LRU) Contains(v interface{}) bool {
+	lru.mutex.Lock()
+	defer lru.mutex.Unlock()
 
-	if e, ok := c.e[v]; ok {
-		c.l.MoveToFront(e)
+	if e, ok := lru.exists[v]; ok {
+		lru.items.MoveToFront(e)
 		return true
 	}
 	return false
 }
 
-// Put creates a new item in the Cache.
-func (c *Cache) Put(v interface{}) {
-	c.Lock()
-	defer c.Unlock()
+// Add creates a new item in the LRU.
+func (lru *LRU) Add(v interface{}) {
+	lru.mutex.Lock()
+	defer lru.mutex.Unlock()
 
-	if e, ok := c.e[v]; ok {
-		c.l.MoveToFront(e)
+	if e, ok := lru.exists[v]; ok {
+		lru.items.MoveToFront(e)
 		return
 	}
 
 	// if the cache is full, remove last element
-	if c.l.Len() == c.s {
-		last := c.l.Back()
-		c.l.Remove(last)
-		delete(c.e, last.Value)
+	if lru.items.Len() == lru.size {
+		last := lru.items.Back()
+		lru.items.Remove(last)
+		delete(lru.exists, last.Value)
 	}
 
-	c.e[v] = c.l.PushFront(v)
+	lru.exists[v] = lru.items.PushFront(v)
 }
 
-// Delete deletes an item from the Cache.
-func (c *Cache) Delete(v interface{}) {
-	c.Lock()
-	defer c.Unlock()
+// Delete deletes an item from the LRU.
+func (lru *LRU) Delete(v interface{}) {
+	lru.mutex.Lock()
+	defer lru.mutex.Unlock()
 
-	e, ok := c.e[v]
+	e, ok := lru.exists[v]
 	if !ok {
 		// item not in cache, do nothing
 		return
 	}
 
-	c.l.Remove(e)
-	delete(c.e, v)
+	lru.items.Remove(e)
+	delete(lru.exists, v)
 }
 
-// NewCache create a new Cache of a given size.
-func NewCache(size int) *Cache {
-	s := &Cache{
-		s: size,
-		l: list.New(),
-		e: make(map[interface{}]*list.Element, size),
+// NewLRU create a new LRU of a given size.
+func NewLRU(size int) (*LRU, error) {
+	if size < 1 {
+		return nil, errors.New("cache size must be > 0")
 	}
-	return s
+
+	lru := &LRU{
+		size:   size,
+		items:  list.New(),
+		exists: make(map[interface{}]*list.Element, size),
+	}
+	return lru, nil
 }
