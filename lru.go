@@ -1,4 +1,4 @@
-package main
+package csfundamentals
 
 import (
 	"container/list"
