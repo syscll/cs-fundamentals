@@ -30,17 +30,20 @@ func TestLRUAdd(t *testing.T) {
 
 	t.Run("TestEmptyLRU", func(t *testing.T) {
 		// put new item in cache
-		c.Add("test")
+		evicted := c.Add("test")
 
 		// check item has been added to cache
 		if !c.Contains("test") {
 			t.Error("expected to have 'test' item in cache")
 		}
+		if evicted {
+			t.Error("expected 0 items to have been evicted")
+		}
 	})
 
 	t.Run("TestFullLRU", func(t *testing.T) {
 		// put another new item in cache
-		c.Add("test-2")
+		evicted := c.Add("test-2")
 
 		// check item has been added to cache
 		if !c.Contains("test-2") {
@@ -48,7 +51,7 @@ func TestLRUAdd(t *testing.T) {
 		}
 
 		// check original item was deleted from cache
-		if c.Contains("test") {
+		if c.Contains("test") || !evicted {
 			t.Error("expected 'test' item to be deleted from cache")
 		}
 	})

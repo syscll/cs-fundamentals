@@ -34,13 +34,16 @@ func (lru *LRU) Contains(v interface{}) bool {
 }
 
 // Add creates a new item in the LRU.
-func (lru *LRU) Add(v interface{}) {
+// It will return true if an item was evicted.
+func (lru *LRU) Add(v interface{}) bool {
 	lru.mutex.Lock()
 	defer lru.mutex.Unlock()
 
+	evicted := false
+
 	if e, ok := lru.exists[v]; ok {
 		lru.items.MoveToFront(e)
-		return
+		return evicted
 	}
 
 	// if the cache is full, remove last element
@@ -48,9 +51,11 @@ func (lru *LRU) Add(v interface{}) {
 		last := lru.items.Back()
 		lru.items.Remove(last)
 		delete(lru.exists, last.Value)
+		evicted = true
 	}
 
 	lru.exists[v] = lru.items.PushFront(v)
+	return evicted
 }
 
 // Delete deletes an item from the LRU.
