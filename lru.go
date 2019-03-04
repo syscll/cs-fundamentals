@@ -43,6 +43,9 @@ func NewLRUCache(size int) (*LRUCache, error) {
 
 // Get retrieves a given element from the LRU Cache.
 func (lru *LRUCache) Get(key interface{}) interface{} {
+	lru.mutex.Lock()
+	defer lru.mutex.Unlock()
+
 	if e, ok := lru.exists[key]; ok {
 		lru.items.MoveToFront(e)
 		if i, ok := e.Value.(item); ok {
@@ -55,6 +58,9 @@ func (lru *LRUCache) Get(key interface{}) interface{} {
 // Put creates a new item in the LRU Cache.
 // It will return true if an item was evicted.
 func (lru *LRUCache) Put(key, value interface{}) bool {
+	lru.mutex.Lock()
+	defer lru.mutex.Unlock()
+
 	if e, ok := lru.exists[key]; ok {
 		if i, ok := e.Value.(item); ok {
 			i.val = value
