@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-// LRU is an implementation of an LRU cache.
-type LRU struct {
+// LRUCache is an implementation of an LRU cache.
+type LRUCache struct {
 	// size represents the size of the cache.
 	size int
 
@@ -21,68 +21,78 @@ type LRU struct {
 	mutex sync.Mutex
 }
 
-// Contains checks if a given element is in the LRU.
-func (lru *LRU) Contains(v interface{}) bool {
-	lru.mutex.Lock()
-	defer lru.mutex.Unlock()
-
-	if e, ok := lru.exists[v]; ok {
-		lru.items.MoveToFront(e)
-		return true
-	}
-	return false
+// item represents an item saved in the cache
+type item struct {
+	key interface{}
+	val interface{}
 }
 
-// Add creates a new item in the LRU.
-// It will return true if an item was evicted.
-func (lru *LRU) Add(v interface{}) bool {
-	lru.mutex.Lock()
-	defer lru.mutex.Unlock()
-
-	evicted := false
-
-	if e, ok := lru.exists[v]; ok {
-		lru.items.MoveToFront(e)
-		return evicted
-	}
-
-	// if the cache is full, remove last element
-	if lru.items.Len() == lru.size {
-		last := lru.items.Back()
-		lru.items.Remove(last)
-		delete(lru.exists, last.Value)
-		evicted = true
-	}
-
-	lru.exists[v] = lru.items.PushFront(v)
-	return evicted
-}
-
-// Delete deletes an item from the LRU.
-func (lru *LRU) Delete(v interface{}) {
-	lru.mutex.Lock()
-	defer lru.mutex.Unlock()
-
-	e, ok := lru.exists[v]
-	if !ok {
-		// item not in cache, do nothing
-		return
-	}
-
-	lru.items.Remove(e)
-	delete(lru.exists, v)
-}
-
-// NewLRU create a new LRU of a given size.
-func NewLRU(size int) (*LRU, error) {
+// NewLRUCache create a new LRU of a given size.
+func NewLRUCache(size int) (*LRUCache, error) {
 	if size < 1 {
 		return nil, errors.New("cache size must be > 0")
 	}
 
-	lru := &LRU{
+	lru := &LRUCache{
 		size:   size,
 		items:  list.New(),
 		exists: make(map[interface{}]*list.Element, size),
 	}
 	return lru, nil
+}
+
+// Get retrieves a given element from the LRU Cache.
+func (lru *LRUCache) Get(key interface{}) interface{} {
+	if e, ok := lru.exists[key]; ok {
+		lru.items.MoveToFront(e)
+		if i, ok := e.Value.(item); ok {
+			return i.val
+		}
+	}
+	return nil
+}
+
+// Put creates a new item in the LRU Cache.
+// It will return true if an item was evicted.
+func (lru *LRUCache) Put(key, value interface{}) bool {
+	if e, ok := lru.exists[key]; ok {
+		if i, ok := e.Value.(item); ok {
+			i.val = value
+			e.Value = i
+		}
+		lru.items.MoveToFront(e)
+		return false
+	}
+
+	evicted := false
+
+	// if the cache is full, remove last element
+	if lru.items.Len() == lru.size {
+		last := lru.items.Back()
+		lru.items.Remove(last)
+		if e, ok := last.Value.(item); ok {
+			delete(lru.exists, e.key)
+		}
+		evicted = true
+	}
+
+	i := item{
+		key: key,
+		val: value,
+	}
+
+	lru.exists[key] = lru.items.PushFront(i)
+	return evicted
+}
+
+// Delete deletes an item from the LRU.
+func (lru *LRUCache) Delete(key interface{}) {
+	lru.mutex.Lock()
+	defer lru.mutex.Unlock()
+
+	// if item is in cache, remove it
+	if e, ok := lru.exists[key]; ok {
+		lru.items.Remove(e)
+		delete(lru.exists, key)
+	}
 }
