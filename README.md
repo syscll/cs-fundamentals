@@ -1,4 +1,4 @@
-# cs-fundamentals [![Build Status](https://travis-ci.org/syscll/cs-fundamentals.svg?branch=master)](https://travis-ci.org/syscll/cs-fundamentals)
+# cs-fundamentals [![Build Status](https://github.com/syscll/cs-fundamentals/workflows/build/badge.svg)](https://github.com/syscll/cs-fundamentals/actions)
 Implementations of common CS fundamentals in Go.
 
 ## LRU Cache
